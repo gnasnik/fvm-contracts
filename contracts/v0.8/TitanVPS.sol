@@ -6,6 +6,8 @@ import "../openzeppelin/contracts/access/Ownable.sol";
 contract TitanVPS is Ownable {
     mapping(string => bool) public orders;
 
+    mapping(string => Order) public records;
+
     event OrderEvent (
         string indexed orderID,
         address indexed buyerAddr,
@@ -13,6 +15,15 @@ contract TitanVPS is Ownable {
         uint256 expiration,
         uint256 timestamp
     );
+
+    struct Order {
+        string  orderID;
+        address buyerAddr;
+        uint256 price;
+        uint256 expiration;
+        uint256 timestamp;
+    }
+
 
     /**
      * @dev Create a new order with the provided details.
@@ -32,8 +43,22 @@ contract TitanVPS is Ownable {
     ) public onlyOwner {
         // Mark the order as active
         orders[_orderID] = true;
+        records[_orderID].orderID = _orderID;
+        records[_orderID].buyerAddr = _buyerAddr;
+        records[_orderID].price = _price;
+        records[_orderID].expiration = _expiration;
+        records[_orderID].timestamp = _timestamp;
+
 
         // Emit an event to notify about the new order
         emit OrderEvent(_orderID, _buyerAddr, _price, _expiration, _timestamp);
+    }
+
+    function queryOrder(string memory _orderID) public view returns (
+        Order memory
+    ) {
+        Order storage _order = records[_orderID];
+        require(bytes(_order.orderID).length > 0, "Order not found"); // Check if the order exists
+        return _order;
     }
 }

@@ -65,3 +65,34 @@ func (c *client) InvokeContract(invokeFunc func(opts *bind.TransactOpts) (*types
 
 	return tx.MarshalJSON()
 }
+
+// QueryContract query an EVM smart contract
+func (c *client) QueryContract(invokeFunc func(opts *bind.TransactOpts) (*types.Transaction, error)) ([]byte, error) {
+	privateKey, err := crypto.HexToECDSA(c.Cfg.privateKey)
+	if err != nil {
+		return nil, err
+	}
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, errors.New("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
+	}
+
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+	signer := types.LatestSignerForChainID(big.NewInt(c.Cfg.networkID))
+	opts := &bind.TransactOpts{
+		Signer: func(address common.Address, transaction *types.Transaction) (*types.Transaction, error) {
+			return types.SignTx(transaction, signer, privateKey)
+		},
+		From:    fromAddress,
+		Context: context.Background(),
+	}
+
+	tx, err := invokeFunc(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return tx.MarshalJSON()
+}
